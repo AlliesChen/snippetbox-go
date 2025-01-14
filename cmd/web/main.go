@@ -2,21 +2,32 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
+	"log/slog"
 	"net/http"
+	"os"
 	"path/filepath"
 )
 
+type config struct {
+	port int
+}
+
+var cfg config
+
 func main() {
 	// don't use ports 0 ~ 1023 as it used by OS
-	addr := flag.String("addr", ":4000", "HTTP network address")
+	flag.IntVar(&cfg.port, "port", 4000, "HTTP network address")
 	// you need to call this *before* you use the addr variable
 	// otherwise it will always be the default value ":4000"
 	flag.Parse()
 
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+
 	mux := http.NewServeMux()
 
-	fileServer := http.FileServer(neuteredFileSystem{http.Dir("./ui/static")})
+	fileServer := http.FileServer(neuteredFileSystem{http.Dir("./ui/static/")})
 	mux.Handle(("GET /static"), http.NotFoundHandler())
 	mux.Handle("GET /static/", http.StripPrefix("/static", fileServer))
 
@@ -25,10 +36,11 @@ func main() {
 	mux.HandleFunc("GET /snippet/create", snippetCreate)
 	mux.HandleFunc("POST /snippet/create", snippetCreatePost)
 
-	log.Printf("starting server on %s", *addr)
+	logger.Info("starting server", "port", cfg.port)
 
-	err := http.ListenAndServe(":4000", mux)
-	log.Fatal(err)
+	err := http.ListenAndServe(fmt.Sprintf(":%d", cfg.port), mux)
+	logger.Error(err.Error())
+	os.Exit(1)
 }
 
 type neuteredFileSystem struct {
