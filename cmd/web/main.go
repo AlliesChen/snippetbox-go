@@ -23,7 +23,10 @@ func main() {
 	// otherwise it will always be the default value ":4000"
 	flag.Parse()
 
-	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+		Level:     slog.LevelDebug,
+		AddSource: true,
+	}))
 
 	mux := http.NewServeMux()
 
@@ -36,7 +39,7 @@ func main() {
 	mux.HandleFunc("GET /snippet/create", snippetCreate)
 	mux.HandleFunc("POST /snippet/create", snippetCreatePost)
 
-	logger.Info("starting server", "port", cfg.port)
+	logger.Info("starting server", slog.Int("port", cfg.port))
 
 	err := http.ListenAndServe(fmt.Sprintf(":%d", cfg.port), mux)
 	logger.Error(err.Error())
