@@ -16,6 +16,10 @@ type config struct {
 
 var cfg config
 
+type application struct {
+	logger *slog.Logger
+}
+
 func main() {
 	// don't use ports 0 ~ 1023 as it used by OS
 	flag.IntVar(&cfg.port, "port", 4000, "HTTP network address")
@@ -28,16 +32,20 @@ func main() {
 		AddSource: true,
 	}))
 
+	app := &application{
+		logger: logger,
+	}
+
 	mux := http.NewServeMux()
 
 	fileServer := http.FileServer(neuteredFileSystem{http.Dir("./ui/static/")})
 	mux.Handle(("GET /static"), http.NotFoundHandler())
 	mux.Handle("GET /static/", http.StripPrefix("/static", fileServer))
 
-	mux.HandleFunc("GET /{$}", home)
-	mux.HandleFunc("GET /snippet/view/{id}", snippetView)
-	mux.HandleFunc("GET /snippet/create", snippetCreate)
-	mux.HandleFunc("POST /snippet/create", snippetCreatePost)
+	mux.HandleFunc("GET /{$}", app.home)
+	mux.HandleFunc("GET /snippet/view/{id}", app.snippetView)
+	mux.HandleFunc("GET /snippet/create", app.snippetCreate)
+	mux.HandleFunc("POST /snippet/create", app.snippetCreatePost)
 
 	logger.Info("starting server", slog.Int("port", cfg.port))
 
