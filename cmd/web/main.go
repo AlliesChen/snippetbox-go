@@ -1,17 +1,19 @@
 package main
 
 import (
+	"database/sql"
 	"flag"
 	"fmt"
-	"log"
 	"log/slog"
 	"net/http"
 	"os"
-	"path/filepath"
+
+	_ "github.com/go-sql-driver/mysql"
 )
 
 type config struct {
 	port int
+	dsn  string
 }
 
 var cfg config
@@ -23,6 +25,7 @@ type application struct {
 func main() {
 	// don't use ports 0 ~ 1023 as it used by OS
 	flag.IntVar(&cfg.port, "port", 4000, "HTTP network address")
+	flag.StringVar(&cfg.dsn, "dsn", "web:web_pwd@/snippetbox?parseTime=true", "MySQL data source name")
 	// you need to call this *before* you use the addr variable
 	// otherwise it will always be the default value ":4000"
 	flag.Parse()
@@ -32,57 +35,35 @@ func main() {
 		AddSource: true,
 	}))
 
+	db, err := openDB(cfg.dsn)
+	if err != nil {
+		logger.Error(err.Error())
+		os.Exit(1)
+	}
+
+	defer db.Close()
+
 	app := &application{
 		logger: logger,
 	}
 
-	mux := http.NewServeMux()
-
-	fileServer := http.FileServer(neuteredFileSystem{http.Dir("./ui/static/")})
-	mux.Handle(("GET /static"), http.NotFoundHandler())
-	mux.Handle("GET /static/", http.StripPrefix("/static", fileServer))
-
-	mux.HandleFunc("GET /{$}", app.home)
-	mux.HandleFunc("GET /snippet/view/{id}", app.snippetView)
-	mux.HandleFunc("GET /snippet/create", app.snippetCreate)
-	mux.HandleFunc("POST /snippet/create", app.snippetCreatePost)
-
 	logger.Info("starting server", slog.Int("port", cfg.port))
 
-	err := http.ListenAndServe(fmt.Sprintf(":%d", cfg.port), mux)
-	logger.Error(err.Error())
+	err = http.ListenAndServe(fmt.Sprintf(":%d", cfg.port), app.routes())
+	logger.Error(err.Error(), "port", fmt.Sprintf(":%d", cfg.port))
 	os.Exit(1)
 }
 
-type neuteredFileSystem struct {
-	fs http.FileSystem
-}
-
-func (nfs neuteredFileSystem) Open(path string) (http.File, error) {
-	f, err := nfs.fs.Open(path)
+func openDB(dsn string) (*sql.DB, error) {
+	db, err := sql.Open("mysql", dsn)
 	if err != nil {
-		log.Printf("File system open fail: %v", err)
 		return nil, err
 	}
 
-	s, err := f.Stat()
-	if err != nil {
-		log.Printf("File state checking fail: %v", err)
+	if err := db.Ping(); err != nil {
+		db.Close()
 		return nil, err
 	}
 
-	if s.IsDir() {
-		index := filepath.Join(path, "index.html")
-		log.Printf("Index file: %s", index)
-		if _, err := nfs.fs.Open(index); err != nil {
-			log.Printf("Index file open fail: %v", err)
-			closeErr := f.Close()
-			if closeErr != nil {
-				return nil, closeErr
-			}
-			return nil, err
-		}
-	}
-
-	return f, nil
+	return db, nil
 }
