@@ -1,9 +1,13 @@
 package main
 
 import (
+	"embed"
+	"io/fs"
 	"log/slog"
 	"net/http"
 	"path/filepath"
+
+	"github.com/AlliesChen/snippetbox-go/ui"
 
 	"github.com/justinas/alice"
 )
@@ -11,9 +15,8 @@ import (
 func (app *application) routes() http.Handler {
 	mux := http.NewServeMux()
 
-	fileServer := http.FileServer(neuteredFileSystem{http.Dir("./ui/static/"), app.logger})
-	mux.Handle(("GET /static"), http.NotFoundHandler())
-	mux.Handle("GET /static/", http.StripPrefix("/static", fileServer))
+	mux.Handle("GET /static", http.NotFoundHandler())
+	mux.Handle("GET /static/", http.FileServerFS(neuteredFileSystem{ui.Files, app.logger}))
 
 	// Unprotected application routes using the "dynamic" middleware chain.
 	dynamic := alice.New(app.sessionManager.LoadAndSave, noSurf, app.authenticate)
@@ -35,11 +38,11 @@ func (app *application) routes() http.Handler {
 }
 
 type neuteredFileSystem struct {
-	fs     http.FileSystem
+	fs     embed.FS
 	logger *slog.Logger
 }
 
-func (nfs neuteredFileSystem) Open(path string) (http.File, error) {
+func (nfs neuteredFileSystem) Open(path string) (fs.File, error) {
 	f, err := nfs.fs.Open(path)
 	if err != nil {
 		nfs.logger.Error(err.Error(), "path", path)

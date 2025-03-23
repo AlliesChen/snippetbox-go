@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/justinas/nosurf"
 )
@@ -91,6 +92,29 @@ func (app *application) authenticate(next http.Handler) http.Handler {
 		if exists {
 			ctx := context.WithValue(r.Context(), isAuthenticatedContextKey, true)
 			r = r.WithContext(ctx)
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+func (app *application) mimeType(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		path := r.URL.Path
+		fmt.Println(path)
+		// Set appropriate content types based on file extension
+		switch {
+		case strings.HasSuffix(path, ".css"):
+			w.Header().Set("Content-Type", "text/css")
+		case strings.HasSuffix(path, ".js"):
+			w.Header().Set("Content-Type", "application/javascript")
+		case strings.HasSuffix(path, ".html"):
+			w.Header().Set("Content-Type", "text/html")
+		case strings.HasSuffix(path, ".svg"):
+			w.Header().Set("Content-Type", "image/svg+xml")
+		case strings.HasSuffix(path, ".png"):
+			w.Header().Set("Content-Type", "image/png")
+		case strings.HasSuffix(path, ".jpg"), strings.HasSuffix(path, ".jpeg"):
+			w.Header().Set("Content-Type", "image/jpeg")
 		}
 		next.ServeHTTP(w, r)
 	})
