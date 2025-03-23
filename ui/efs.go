@@ -5,7 +5,7 @@ import (
 	"io/fs"
 )
 
-//go:embed static/css static/js static/img
+//go:embed static/css static/js static/img html
 var Files embed.FS
 var StaticFS fs.FS
 
