@@ -8,6 +8,7 @@ import (
 
 	"github.com/AlliesChen/snippetbox-go/internal/models"
 	"github.com/AlliesChen/snippetbox-go/internal/validator"
+	"github.com/AlliesChen/snippetbox-go/ui"
 )
 
 type snippetCreateForm struct {
@@ -204,4 +205,17 @@ func (app *application) userLogoutPost(w http.ResponseWriter, r *http.Request) {
 	app.sessionManager.Remove(r.Context(), "authenticatedUserID")
 	app.sessionManager.Put(r.Context(), "flash", "You've been logged out successfully!")
 	http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
+func (app *application) appStatic(w http.ResponseWriter, r *http.Request) {
+	// you can add a check here to prevent access to certain files
+	path := r.URL.Path[len("/static/"):]
+	if len(path) == 0 ||
+		len(path[len("js"):]) <= 1 ||
+		len(path[len("css"):]) <= 1 ||
+		len(path[len("img"):]) <= 1 {
+		http.NotFound(w, r)
+		return
+	}
+	http.StripPrefix("/static/", http.FileServer(http.FS(ui.StaticFS))).ServeHTTP(w, r)
 }
