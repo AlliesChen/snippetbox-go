@@ -219,3 +219,7 @@ func (app *application) appStatic(w http.ResponseWriter, r *http.Request) {
 	}
 	http.StripPrefix("/static/", http.FileServer(http.FS(ui.StaticFS))).ServeHTTP(w, r)
 }
+
+func ping(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte("OK"))
+}

@@ -4,9 +4,9 @@ import (
 	"testing"
 )
 
-func Equal[T comparable](t *testing.T, expected, actual T) {
+func Equal[T comparable](t *testing.T, actual, expected T) {
 	t.Helper()
 	if actual != expected {
-		t.Errorf("want %v; got %v", expected, actual)
+		t.Errorf("want %v; got %v", actual, expected)
 	}
 }
