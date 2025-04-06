@@ -1,0 +1,9 @@
+[flyway]
+locations = ["filesystem:migrations"]
+
+[environments.test]
+url = "jdbc:mysql://localhost:3306/test_snippetbox"
+user = "test_web"
+password = "pass"
+schemas = ["test_snippetbox"]
+locations = ["filesystem:sql/migrations", "filesystem:sql/seeds/test"]
