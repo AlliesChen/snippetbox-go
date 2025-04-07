@@ -20,13 +20,15 @@ import (
 )
 
 type config struct {
-	port int
-	dsn  string
+	port  int
+	dsn   string
+	debug bool
 }
 
 var cfg config
 
 type application struct {
+	debug          bool
 	logger         *slog.Logger
 	snippets       models.SnippetModelInterface
 	users          models.UserModelInterface
@@ -39,6 +41,7 @@ func main() {
 	// don't use ports 0 ~ 1023 as it used by OS
 	flag.IntVar(&cfg.port, "port", 4000, "HTTP network address")
 	flag.StringVar(&cfg.dsn, "dsn", "web:web_pwd@/snippetbox?parseTime=true", "MySQL data source name")
+	flag.BoolVar(&cfg.debug, "debug", false, "Enable debug mode")
 	// you need to call this *before* you use the addr variable
 	// otherwise it will always be the default value ":4000"
 	flag.Parse()
@@ -70,6 +73,7 @@ func main() {
 	sessionManager.Cookie.Secure = true
 
 	app := &application{
+		debug:          cfg.debug,
 		logger:         logger,
 		snippets:       &models.SnippetModel{DB: db},
 		users:          &models.UserModel{DB: db},
